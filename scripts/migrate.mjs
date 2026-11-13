@@ -1,5 +1,29 @@
+import { existsSync, readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import pg from "pg";
+
+function loadEnvLocal() {
+  if (process.env.DATABASE_URL?.trim()) return;
+  const path = ".env.local";
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const i = t.indexOf("=");
+    if (i === -1) continue;
+    const key = t.slice(0, i).trim();
+    let val = t.slice(i + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = val;
+  }
+}
+
+loadEnvLocal();
 
 const url = process.env.DATABASE_URL?.trim() ?? "";
 const files = (await readdir("migrations").catch(() => []))
